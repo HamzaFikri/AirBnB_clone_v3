@@ -66,7 +66,7 @@ def post_place(city_id=None):
                     user_id=user.id)
     storage.new(new_obj)
     storage.save()
-    return jsonify(new_obj.to_dict()), 201
+    return jsonify(new_obj.to_dict()), 200
 
 
 @app_views.route('/places/<place_id>', methods=['PUT'],
