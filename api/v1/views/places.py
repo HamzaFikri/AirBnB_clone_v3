@@ -14,7 +14,7 @@ import json
 
 @app_views.route("/cities/<id>/places", methods=["GET"])
 def get_places(id):
-    """retrieves all places by city id object"""
+    """retrieves all places by by city id object"""
     city = storage.get(City, id)
     if not city:
         abort(404)
