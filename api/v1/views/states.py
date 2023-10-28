@@ -5,62 +5,81 @@ from api.v1.views import app_views
 from flask import abort, jsonify, make_response, request
 from models import storage
 from models.state import State
+import json
 
 
-@app_views.route('/states', methods=['GET'], strict_slashes=False)
+@app_views.route("/states", methods=["GET"])
 def get_states():
-    """get state information for all states"""
-    states = []
-    for state in storage.all("State").values():
-        states.append(state.to_dict())
-    return jsonify(states)
+    """retrieves all State object"""
+    allStates = storage.all(State).values()
+    statesList = []
+    for state in allStates:
+        statesList.append(state.to_dict())
+    response = make_response(json.dumps(statesList), 200)
+    response.headers["Content-Type"] = "application/json"
+    return response
 
 
-@app_views.route('/states/<string:state_id>', methods=['GET'],
-                 strict_slashes=False)
-def get_state(state_id):
-    """get state information for specified state"""
-    state = storage.get("State", state_id)
-    if state is None:
+@app_views.route("/states/<id>", methods=["GET"])
+def get_state(id):
+    """retrieves State object with id"""
+    state = storage.get(State, id)
+    if not state:
         abort(404)
-    return jsonify(state.to_dict())
+    response_data = state.to_dict()
+    response = make_response(json.dumps(response_data), 200)
+    response.headers["Content-Type"] = "application/json"
+    return response
 
 
-@app_views.route('/states/<string:state_id>', methods=['DELETE'],
-                 strict_slashes=False)
-def delete_state(state_id):
-    """deletes a state based on its state_id"""
-    state = storage.get("State", state_id)
-    if state is None:
+@app_views.route("/states/<id>", methods=["DELETE"])
+def delete_state(id):
+    """delets state with id"""
+    state = storage.get(State, id)
+    if not state:
         abort(404)
-    state.delete()
+    storage.delete(state)
     storage.save()
-    return (jsonify({}))
+    res = {}
+    response = make_response(json.dumps(res), 200)
+    response.headers["Content-Type"] = "application/json"
+    return response
 
 
-@app_views.route('/states/', methods=['POST'], strict_slashes=False)
-def post_state():
-    """create a new state"""
+@app_views.route("/states", methods=["POST"])
+def create_state():
+    """inserts state if its valid json amd has correct key"""
+    abortMSG = "Not a JSON"
+    missingMSG = "Missing name"
     if not request.get_json():
-        return make_response(jsonify({'error': 'Not a JSON'}), 400)
-    if 'name' not in request.get_json():
-        return make_response(jsonify({'error': 'Missing name'}), 400)
-    state = State(**request.get_json())
-    state.save()
-    return make_response(jsonify(state.to_dict()), 201)
+        abort(400, description=abortMSG)
+    if "name" not in request.get_json():
+        abort(400, description=missingMSG)
+    data = request.get_json()
+    instObj = State(**data)
+    instObj.save()
+    res = instObj.to_dict()
+    response = make_response(json.dumps(res), 201)
+    response.headers["Content-Type"] = "application/json"
+    return response
 
 
-@app_views.route('/states/<string:state_id>', methods=['PUT'],
-                 strict_slashes=False)
-def put_state(state_id):
-    """update a state"""
-    state = storage.get("State", state_id)
-    if state is None:
+@app_views.route("/states/<id>", methods=["PUT"])
+def put_state(id):
+    """update a state by id"""
+    abortMSG = "Not a JSON"
+    state = storage.get(State, id)
+    ignoreKeys = ["id", "created_at", "updated_at"]
+    if not state:
         abort(404)
     if not request.get_json():
-        return make_response(jsonify({'error': 'Not a JSON'}), 400)
-    for attr, val in request.get_json().items():
-        if attr not in ['id', 'created_at', 'updated_at']:
-            setattr(state, attr, val)
-    state.save()
-    return jsonify(state.to_dict())
+        abort(400, description=abortMSG)
+    data = request.get_json()
+    for key, value in data.items():
+        if key not in ignoreKeys:
+            setattr(state, key, value)
+    storage.save()
+    res = state.to_dict()
+    response = make_response(json.dumps(res), 200)
+    response.headers["Content-Type"] = "application/json"
+    return response
