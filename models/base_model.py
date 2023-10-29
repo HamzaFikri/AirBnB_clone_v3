@@ -10,9 +10,8 @@ import sqlalchemy
 from sqlalchemy import Column, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 import uuid
-import hashlib
 
-time = "%Y-%m-%dT%H:%M:%S.%f"
+time = "%Y-%m-%dT%H:%M:%S"
 
 if models.storage_t == "db":
     Base = declarative_base()
@@ -59,25 +58,19 @@ class BaseModel:
         models.storage.new(self)
         models.storage.save()
 
-    def to_dict(self, save_to_disk=False):
+    def to_dict(self, fsmode=None):
         """returns a dictionary containing all keys/values of the instance"""
         new_dict = self.__dict__.copy()
         if "created_at" in new_dict:
-            new_dict["created_at"] = new_dict["created_at"].isoformat()
+            new_dict["created_at"] = new_dict["created_at"].strftime(time)
         if "updated_at" in new_dict:
-            new_dict["updated_at"] = new_dict["updated_at"].isoformat()
-        if '_password' in new_dict:
-            new_dict['password'] = new_dict['_password']
-            new_dict.pop('_password', None)
-        if 'amenities' in new_dict:
-            new_dict.pop('amenities', None)
-        if 'reviews' in new_dict:
-            new_dict.pop('reviews', None)
+            new_dict["updated_at"] = new_dict["updated_at"].strftime(time)
         new_dict["__class__"] = self.__class__.__name__
-        new_dict.pop('_sa_instance_state', None)
-        if not save_to_disk:
-            new_dict.pop('password', None)
+        if "_sa_instance_state" in new_dict:
+            del new_dict["_sa_instance_state"]
+        new_dict.pop("password", None) if fsmode is None else None
         return new_dict
+
     def delete(self):
         """delete the current instance from the storage"""
         models.storage.delete(self)
